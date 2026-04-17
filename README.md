@@ -179,7 +179,7 @@ Documentados en [`docs/informe_ejecutivo.pdf`](docs/informe_ejecutivo.pdf), secc
 
 ## 👤 Autor
 
-**Santiago Rueda** — Data Engineer / ML Engineer / BI Analyst
+**Santiago Rueda** — Data Scientist / ML Engineer /
 [LinkedIn](https://linkedin.com/in/santiagorueda) · [GitHub](https://github.com/santiagrueda)
 
 ## 📄 Licencia
