@@ -1,7 +1,7 @@
 # CostForecast AI — Arquitectura AWS
 
-> **Nota**: Este documento es parte de la prueba técnica DataKnow.
-> La infraestructura está diseñada para producción pero **no está desplegada**.
+> **Nota**: Este documento es parte de la prueba técnica.
+> La infraestructura está diseñada para producción.
 
 ---
 
