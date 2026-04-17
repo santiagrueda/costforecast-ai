@@ -151,3 +151,31 @@ with Diagram(
 
 
 print(f"Diagrama generado: {OUT_FILE}.svg")
+
+# ---------------------------------------------------------------------------
+# Post-process: embed PNG icons as base64 data URIs for portability
+# ---------------------------------------------------------------------------
+
+import base64
+import re as _re
+
+_svg_path = pathlib.Path(f"{OUT_FILE}.svg")
+_content = _svg_path.read_text(encoding="utf-8")
+
+
+def _embed(match: _re.Match) -> str:
+    raw = match.group(1)
+    path = pathlib.Path(raw.replace("/", "\\"))
+    if not path.exists():
+        path = pathlib.Path(raw)
+    if path.exists():
+        data = base64.b64encode(path.read_bytes()).decode("ascii")
+        mime = "image/svg+xml" if path.suffix.lower() == ".svg" else "image/png"
+        return f'xlink:href="data:{mime};base64,{data}"'
+    return match.group(0)
+
+
+_embedded = _re.sub(r'xlink:href="([^"]+)"', _embed, _content)
+_count = len(_re.findall(r'xlink:href="data:', _embedded))
+_svg_path.write_text(_embedded, encoding="utf-8")
+print(f"Embedded {_count} icons as base64 — SVG is now self-contained ({_svg_path.stat().st_size // 1024} KB)")
