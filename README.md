@@ -153,53 +153,127 @@ El pipeline sigue un flujo iterativo:
 
 ## 📈 Resultados
 
-> Calculados sobre el dataset real `historico_equipos.csv` (3 530 observaciones diarias, 2010-01-04 → 2023-08-31).
+> Todos los resultados fueron computados sobre el dataset real (`historico_equipos.csv`).  
+> 3 530 observaciones diarias en días hábiles · 2010-01-04 → 2023-08-31 · 0 nulos · 0 gaps > 5 días.
 
-### Dataset
+---
 
-| Serie | Media | Std | Mín | Máx |
+### 1. Análisis descriptivo
+
+| Serie | Media | Std | CV (%) | Mín | Máx | Asimetría | Curtosis |
+|---|---|---|---|---|---|---|---|
+| Price_X | 78.09 | 25.19 | 32.3 | 19.33 | 127.98 | 0.08 | −1.14 |
+| Price_Y | 555.53 | 138.49 | 24.9 | 257.50 | 1 062.37 | 0.48 | 0.73 |
+| Price_Z | 2 037.43 | 373.14 | 18.3 | 1 421.50 | 3 984.00 | 1.14 | 1.99 |
+| **Price_Equipo1** | **460.04** | **113.68** | **24.7** | 208.34 | 855.32 | 0.41 | 0.59 |
+| **Price_Equipo2** | **889.98** | **170.04** | **19.1** | 566.00 | 1 703.96 | 0.83 | 1.07 |
+
+> **CV (coeficiente de variación)**: X es la materia prima más volátil (32.3 %). Price_Z la más estable (18.3 %). Los equipos tienen variabilidad similar a Y y Z, sus drivers naturales.
+
+**Tendencia (CAGR 2010–2023) y volatilidad anualizada:**
+
+| Serie | Precio inicio | Precio fin | Variación total | CAGR | Vol. anual |
+|---|---|---|---|---|---|
+| Price_X | 80.1 | 86.9 | +8.4 % | +0.59 %/año | 35.9 % |
+| Price_Y | 527.5 | 545.0 | +3.3 % | +0.24 %/año | 16.6 % |
+| Price_Z | 2 225.2 | 2 165.2 | −2.7 % | −0.20 %/año | 21.8 % |
+| **Price_Equipo1** | 434.7 | 451.7 | +3.9 % | +0.28 %/año | **42.2 %** |
+| **Price_Equipo2** | 931.7 | 955.4 | +2.5 % | +0.18 %/año | **42.8 %** |
+
+> Insight clave: los equipos tienen **CAGR casi nulo** (< 0.3 %/año) pero **volatilidad intradécada del 42 %**. Esto explica por qué el problema presupuestal no es de tendencia sino de oscilación: el precio puede desviarse ±40 % del promedio en cualquier año.
+
+---
+
+### 2. Estacionariedad (Test ADF)
+
+Todas las series son **I(1)**: no estacionarias en nivel pero estacionarias tras una primera diferencia.
+
+| Serie | ADF nivel | p-valor | ADF Δ(1) | p-valor | Orden |
+|---|---|---|---|---|---|
+| Price_X | −1.705 | 0.4284 | −27.455 | < 0.001 | I(1) |
+| Price_Y | −2.530 | 0.1083 | −8.727 | < 0.001 | I(1) |
+| Price_Z | −2.203 | 0.2052 | −14.724 | < 0.001 | I(1) |
+| Price_Equipo1 | −2.390 | 0.1445 | −16.946 | < 0.001 | I(1) |
+| Price_Equipo2 | −1.906 | 0.3290 | −29.707 | < 0.001 | I(1) |
+
+> Implicación de modelado: se justifica la diferenciación d=1 en SARIMAX y el uso de features de primera y segunda diferencia en XGBoost. Los modelos que no manejan series I(1) (ej. OLS directo) producirían regresiones espúrias.
+
+---
+
+### 3. Correlación — Pearson y Spearman
+
+| Materia prima | Equipo 1 (Pearson) | Equipo 1 (Spearman) | Equipo 2 (Pearson) | Equipo 2 (Spearman) |
 |---|---|---|---|---|
-| Price_X | 78.09 | 25.19 | 19.33 | 127.98 |
-| Price_Y | 555.53 | 138.49 | 257.50 | 1 062.37 |
-| Price_Z | 2 037.43 | 373.14 | 1 421.50 | 3 984.00 |
-| **Price_Equipo1** | **460.04** | 113.68 | 208.34 | 855.32 |
-| **Price_Equipo2** | **889.98** | 170.04 | 566.00 | 1 703.96 |
+| Price_X | 0.523 | 0.624 | 0.530 | 0.604 |
+| Price_Y | **0.997** | **0.994** | 0.913 | 0.927 |
+| Price_Z | 0.844 | 0.866 | **0.983** | **0.980** |
 
-### Drivers identificados — Correlaciones de Pearson
+> La consistencia entre Pearson y Spearman descarta que las correlaciones altas sean artefactos de outliers: la relación Y→Equipo1 y Z→Equipo2 es robusta tanto en magnitud como en rango.
 
-| Materia prima | Equipo 1 | Equipo 2 |
-|---|---|---|
-| Price_X | 0.523 | 0.530 |
-| Price_Y | **0.997** | 0.913 |
-| Price_Z | 0.844 | **0.983** |
+**Drivers identificados:**
+- **Equipo 1**: dominado por Price_Y (r = 0.997, ρ = 0.994). La relación es casi perfectamente lineal.
+- **Equipo 2**: dominado por Price_Z (r = 0.983, ρ = 0.980). Price_Y también es relevante (r = 0.913) pero secundario.
+- **Price_X**: correlación moderada con ambos (~0.52–0.62). Contribuye pero no es driver principal de ninguno.
 
-**Conclusión**: Equipo 1 está determinado casi exclusivamente por Y (r = 0.997). Equipo 2 depende principalmente de Z (r = 0.983). X tiene influencia moderada en ambos.
+---
 
-### Backtesting walk-forward — MAPE (%)
+### 4. Causalidad de Granger
 
-Validación expanding-window · 5 folds · horizontes 1 / 5 / 20 días hábiles.
+Test F sobre series diferenciadas · lags 1–5 · `***` p < 0.001 · `**` p < 0.01 · `*` p < 0.05
 
-**Equipo 1**
+| Causa → Efecto | Lag óptimo | p-valor | Significancia |
+|---|---|---|---|
+| Price_Y → Equipo 1 | 5 | < 0.0001 | *** |
+| Price_Z → Equipo 1 | 4 | < 0.0001 | *** |
+| Price_X → Equipo 1 | 4 | 0.0001 | *** |
+| Price_Y → Equipo 2 | 4 | < 0.0001 | *** |
+| Price_Z → Equipo 2 | 5 | < 0.0001 | *** |
+| Price_X → Equipo 2 | 4 | < 0.0001 | *** |
+
+> Todas las materias primas Granger-causan los precios de ambos equipos con alta significancia estadística. Con n = 3 530, incluso efectos pequeños resultan significativos: la **magnitud económica** (correlación de Pearson) es el criterio principal de selección, no el p-valor. Esto refuerza la elección de Y para Equipo 1 y Z para Equipo 2.
+
+> El lag óptimo de 4–5 días (~1 semana hábil) indica que las variaciones en materias primas se transmiten al precio de los equipos con aproximadamente **una semana de rezago**, información útil para estrategias de cobertura.
+
+---
+
+### 5. Correlación cruzada por rezagos (CCF)
+
+Calculada sobre primeras diferencias para eliminar tendencia común.
+
+| Par | CCF lag=0 | CCF lag=1 | CCF lag=2 | CCF lag=5 |
+|---|---|---|---|---|
+| Price_Y → Price_Equipo1 | **0.386** | −0.006 | 0.059 | 0.057 |
+| Price_Z → Price_Equipo2 | **0.431** | −0.045 | 0.033 | −0.010 |
+
+> La correlación cruzada es máxima en **lag=0** (contemporánea) y decae a valores cercanos a cero para lags > 1. Esto indica que ambos mercados reaccionan en el **mismo día hábil**, no con días de anticipación. El modelo SARIMAX con exog contemporáneo es por tanto la especificación correcta; no hay ganancia de añadir lags de materias primas como regresores.
+
+---
+
+### 6. Backtesting walk-forward — MAPE (%)
+
+Validación expanding-window · 5 folds · horizontes 1 / 5 / 20 días hábiles · exog oracle.
+
+**Equipo 1 — Price_Equipo1**
 
 | Modelo | h = 1 día | h = 5 días | h = 20 días |
 |---|---|---|---|
 | Persistence (baseline) | 3.34 % | 2.24 % | 1.33 % |
 | SARIMAX(1,1,1) + exog | 1.12 % | 1.60 % | 1.20 % |
-| **Prophet** | **1.18 %** | **1.46 %** | **1.17 %** |
+| **Prophet + regressors** | **1.18 %** | **1.46 %** | **1.17 %** |
 
-**Equipo 2**
+**Equipo 2 — Price_Equipo2**
 
 | Modelo | h = 1 día | h = 5 días | h = 20 días |
 |---|---|---|---|
 | Persistence (baseline) | 2.41 % | 1.72 % | 3.65 % |
 | SARIMAX(1,1,1) + exog | 1.81 % | 1.47 % | 1.53 % |
-| **Prophet** | **1.66 %** | **1.32 %** | **1.44 %** |
+| **Prophet + regressors** | **1.66 %** | **1.32 %** | **1.44 %** |
 
-**Modelo ganador**: Prophet supera a SARIMAX en todos los horizontes evaluados para ambos equipos. SARIMAX es el segundo mejor y se usa en la app por su capacidad de generar intervalos de confianza paramétricos nativos.
+**Modelo ganador: Prophet** — supera a SARIMAX en 5 de 6 combinaciones equipo × horizonte. SARIMAX gana únicamente en Equipo 1 a h=1 (MAPE 1.12 % vs 1.18 %). Se usa en la interfaz por sus intervalos de confianza paramétricos nativos.
 
-### Reducción de error vs baseline
+**Reducción de error vs baseline:**
 
-| Equipo | Horizonte | Baseline MAPE | Prophet MAPE | Mejora |
+| Equipo | Horizonte | Baseline | Ganador | Mejora |
 |---|---|---|---|---|
 | Equipo 1 | 1 día | 3.34 % | 1.18 % | **−65 %** |
 | Equipo 1 | 20 días | 1.33 % | 1.17 % | −12 % |
