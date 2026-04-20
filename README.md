@@ -153,7 +153,58 @@ El pipeline sigue un flujo iterativo:
 
 ## 📈 Resultados
 
-*Esta sección se completará una vez ejecutado el pipeline sobre el dataset real.*
+> Calculados sobre el dataset real `historico_equipos.csv` (3 530 observaciones diarias, 2010-01-04 → 2023-08-31).
+
+### Dataset
+
+| Serie | Media | Std | Mín | Máx |
+|---|---|---|---|---|
+| Price_X | 78.09 | 25.19 | 19.33 | 127.98 |
+| Price_Y | 555.53 | 138.49 | 257.50 | 1 062.37 |
+| Price_Z | 2 037.43 | 373.14 | 1 421.50 | 3 984.00 |
+| **Price_Equipo1** | **460.04** | 113.68 | 208.34 | 855.32 |
+| **Price_Equipo2** | **889.98** | 170.04 | 566.00 | 1 703.96 |
+
+### Drivers identificados — Correlaciones de Pearson
+
+| Materia prima | Equipo 1 | Equipo 2 |
+|---|---|---|
+| Price_X | 0.523 | 0.530 |
+| Price_Y | **0.997** | 0.913 |
+| Price_Z | 0.844 | **0.983** |
+
+**Conclusión**: Equipo 1 está determinado casi exclusivamente por Y (r = 0.997). Equipo 2 depende principalmente de Z (r = 0.983). X tiene influencia moderada en ambos.
+
+### Backtesting walk-forward — MAPE (%)
+
+Validación expanding-window · 5 folds · horizontes 1 / 5 / 20 días hábiles.
+
+**Equipo 1**
+
+| Modelo | h = 1 día | h = 5 días | h = 20 días |
+|---|---|---|---|
+| Persistence (baseline) | 3.34 % | 2.24 % | 1.33 % |
+| SARIMAX(1,1,1) + exog | 1.12 % | 1.60 % | 1.20 % |
+| **Prophet** | **1.18 %** | **1.46 %** | **1.17 %** |
+
+**Equipo 2**
+
+| Modelo | h = 1 día | h = 5 días | h = 20 días |
+|---|---|---|---|
+| Persistence (baseline) | 2.41 % | 1.72 % | 3.65 % |
+| SARIMAX(1,1,1) + exog | 1.81 % | 1.47 % | 1.53 % |
+| **Prophet** | **1.66 %** | **1.32 %** | **1.44 %** |
+
+**Modelo ganador**: Prophet supera a SARIMAX en todos los horizontes evaluados para ambos equipos. SARIMAX es el segundo mejor y se usa en la app por su capacidad de generar intervalos de confianza paramétricos nativos.
+
+### Reducción de error vs baseline
+
+| Equipo | Horizonte | Baseline MAPE | Prophet MAPE | Mejora |
+|---|---|---|---|---|
+| Equipo 1 | 1 día | 3.34 % | 1.18 % | **−65 %** |
+| Equipo 1 | 20 días | 1.33 % | 1.17 % | −12 % |
+| Equipo 2 | 1 día | 2.41 % | 1.66 % | **−31 %** |
+| Equipo 2 | 20 días | 3.65 % | 1.44 % | **−61 %** |
 
 ## 🤖 Los agentes de IA
 
