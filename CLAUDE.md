@@ -51,12 +51,52 @@ El PDF del caso (`docs/Caso_consultoria_1_-_candidato.pdf`) contiene instruccion
 - **Estadística**: statsmodels (SARIMAX, Granger, ADF), scipy
 - **ML**: scikit-learn, xgboost, prophet
 - **Explainability**: SHAP
-- **Agente IA**: LangGraph + langchain-anthropic + Claude (modelo `claude-sonnet-4-5-20250929`)
-- **Búsqueda web**: Tavily
-- **UI**: Streamlit
+- **Agente IA (Claude)**: LangGraph + langchain-anthropic + Claude (`claude-sonnet-4-5-20250929`) + Tavily
+- **Agente IA (Open Source)**: LangGraph + langchain-ollama + Gemma 4 (`gemma4:e4b`) via Ollama + DuckDuckGo
+- **UI**: Streamlit (4 tabs: Pronóstico, EDA, Agente Claude, Agente Open Source)
 - **API**: FastAPI + pydantic v2
 - **Cloud**: AWS (documentado, no desplegado)
 - **BI**: Power BI
+
+## Agente Open Source — Gemma 4 + Ollama
+
+El proyecto incluye un segundo agente 100% open source para demo sin dependencias de API externas.
+
+**Archivo**: `src/costforecast/agent/gemma_agent.py`  
+**Clase**: `GemmaAgent`  
+**Modelfile**: `infra/Modelfile`
+
+### Setup rápido
+```bash
+# 1. Levantar Ollama
+ollama serve
+
+# 2. Crear modelo custom (desde raíz del proyecto)
+ollama create costforecast-gemma4 -f infra/Modelfile
+
+# 3. Lanzar app (el tab aparece automáticamente)
+make app
+```
+
+### Variables de entorno relevantes
+```env
+OLLAMA_BASE_URL=http://localhost:11434   # default, omitir si Ollama corre en local
+GEMMA_MODEL=costforecast-gemma4          # nombre del modelo custom
+GEMMA_MODEL_FALLBACK=gemma4:e4b          # tag oficial si no existe el custom
+```
+
+### Modo dual-mode
+- **Native**: Gemma 4 con `think=false` → tool_calls JSON via Ollama (preferido)
+- **Prompting**: ReAct clásico via texto cuando native no funciona (fallback automático)
+
+### Diferencias vs agente Claude
+| Dimensión | Claude (Anthropic) | Gemma 4 (Ollama) |
+|---|---|---|
+| Licencia | Propietario | Apache 2.0 |
+| Costo | API de pago | Gratuito |
+| Web search | Tavily (API key) | DuckDuckGo (free) |
+| Infraestructura | Cloud | Local (CPU) |
+| Velocidad | ~2s | ~15–40s en CPU |
 
 ## Estructura del proyecto
 

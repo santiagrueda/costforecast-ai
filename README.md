@@ -43,7 +43,8 @@ Una empresa constructora debe gestionar el suministro de dos tipos de equipos cr
 | **Modelado** | Competencia entre SARIMAX, Prophet, XGBoost | statsmodels, prophet, xgboost |
 | **Explainability** | Atribución de importancia por variable | SHAP |
 | **Pronóstico** | Predicción + intervalos de confianza + Monte Carlo | numpy, scipy |
-| **Agente IA** | Conversacional con tool-use y búsqueda web | LangGraph, Claude, Tavily |
+| **Agente IA (Claude)** | Conversacional con tool-use y búsqueda web | LangGraph, Claude, Tavily |
+| **Agente IA (Open Source)** | Agente 100% local, sin API keys | LangGraph, Gemma 4, Ollama, DuckDuckGo |
 | **UI** | App de demostración para el evaluador | Streamlit |
 | **API** | Endpoint de serving del modelo | FastAPI |
 | **Cloud** | Arquitectura documentada | AWS (S3, Lambda, SageMaker, Bedrock) |
@@ -91,7 +92,8 @@ costforecast-ai/
 ### Requisitos
 
 - Python 3.11+
-- Claves de API para [Anthropic](https://console.anthropic.com/) y [Tavily](https://tavily.com/) (para el agente)
+- **Agente Claude**: claves de API para [Anthropic](https://console.anthropic.com/) y [Tavily](https://tavily.com/)
+- **Agente Open Source**: [Ollama](https://ollama.com/download) instalado localmente con Gemma 4 (sin API keys)
 
 ### Instalación
 
@@ -153,25 +155,53 @@ El pipeline sigue un flujo iterativo:
 
 *Esta sección se completará una vez ejecutado el pipeline sobre el dataset real.*
 
-## 🤖 El agente de IA
+## 🤖 Los agentes de IA
 
-El agente implementa un ciclo **ReAct (Reason + Act)** con las siguientes herramientas:
+Ambos agentes implementan el ciclo **ReAct (Reason + Act)** y comparten las mismas 5 herramientas:
 
 | Tool | Descripción |
 |---|---|
 | `get_forecast(equipo, meses)` | Consulta al modelo de forecasting |
 | `get_historical_data(fecha_inicio, fecha_fin)` | Accede a datos históricos |
-| `web_search_market_news(query)` | Busca noticias del sector (Tavily) |
+| `web_search_market_news(query)` | Busca noticias del sector |
 | `simulate_scenario(materia_prima, shock_pct)` | What-if análisis |
-| `get_shap_explanation(prediccion_id)` | Explicación de una predicción |
+| `get_shap_explanation(equipo, n_top)` | Explicación de importancia de variables |
 
-**Diferencia vs IA convencional**: un modelo tradicional recibe input y produce output. Un agente percibe, razona, decide qué herramienta usar, ejecuta acciones y ajusta su siguiente paso según el resultado. Tiene **autonomía, uso de herramientas, memoria y capacidad de acción**.
+### Comparativa de arquitecturas
+
+| Dimensión | Agente Claude | Agente Open Source |
+|---|---|---|
+| **LLM** | Claude Sonnet (Anthropic) | Gemma 4 (Google / Ollama) |
+| **Licencia** | Propietario | Apache 2.0 |
+| **Costo** | API de pago | Gratuito |
+| **Web search** | Tavily (API key) | DuckDuckGo (free) |
+| **Infraestructura** | Cloud | Local (CPU) |
+| **Velocidad** | ~2 s/respuesta | ~15–40 s en CPU i7 13G |
+| **Privacidad de datos** | Enviados a Anthropic | 100% local |
+
+### Setup del agente open source
+
+```bash
+# 1. Instalar Ollama
+#    https://ollama.com/download
+
+# 2. Levantar el servidor
+ollama serve
+
+# 3. Crear el modelo custom (optimizado para tool calling)
+ollama create costforecast-gemma4 -f infra/Modelfile
+
+# 4. Lanzar la app — el tab aparece automáticamente
+make app
+```
+
+**Diferencia vs IA convencional**: un agente percibe, razona, decide qué herramienta usar, ejecuta acciones y ajusta su siguiente paso según el resultado — no solo genera texto.
 
 Ejemplo de pregunta que solo un agente puede responder:
 
-> *"Si el cobre sube 15% el próximo mes por la huelga en Chile, ¿cómo afecta el presupuesto de Q2?"*
+> *"Si el acero sube 15% el próximo mes, ¿cómo afecta el presupuesto de Q2 del Equipo 2?"*
 
-El agente buscará noticias para confirmar la huelga, simulará el escenario, consultará SHAP para cuantificar el impacto por equipo, y responderá con números respaldados.
+El agente buscará noticias de mercado, simulará el escenario con los coeficientes reales del EDA, consultará SHAP para cuantificar el impacto, y responderá con cifras concretas.
 
 ## 🔮 Próximos pasos
 

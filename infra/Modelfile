@@ -1,0 +1,37 @@
+# Modelfile — costforecast-gemma4
+#
+# Crea el modelo custom con:
+#   ollama create costforecast-gemma4 -f infra/Modelfile
+#
+# Este archivo fue provisto por Santiago Rueda y optimizado para
+# tool calling nativo en el agente CostForecast AI.
+#
+# IMPORTANTE: El reasoning/thinking debe estar DESACTIVADO para que
+# Gemma 4 genere tool_calls JSON estructurados (no texto libre de razonamiento).
+# Si tu versión de Ollama no soporta "think false", el agente cae
+# automáticamente al modo ReAct prompting sin intervención del usuario.
+
+FROM gemma4:e4b
+
+# ── Parámetros de inferencia ────────────────────────────────────────────────
+
+# Contexto amplio para conversaciones largas con múltiples tool calls
+PARAMETER num_ctx 8192
+
+# Temperatura baja: respuestas más deterministas (crítico para tool calling)
+PARAMETER temperature 0.1
+
+# Máximo de tokens por respuesta
+PARAMETER num_predict 2048
+
+# Desactivar thinking/reasoning para tool calling estructurado
+# (soportado en Ollama >= 0.6.0 con Gemma 4)
+PARAMETER think false
+
+# ── System prompt ────────────────────────────────────────────────────────────
+
+SYSTEM """
+Eres un asistente experto en análisis de costos de equipos de construcción.
+Tienes acceso a herramientas de forecasting, datos históricos, simulación de
+escenarios y búsqueda web. Siempre responde en español. Sé conciso y ejecutivo.
+"""

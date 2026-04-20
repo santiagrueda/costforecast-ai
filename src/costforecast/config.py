@@ -27,12 +27,17 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ---------------- LLM ----------------
+    # ---------------- LLM — Anthropic (Claude) ----------------
     anthropic_api_key: str = Field(default="", description="API key de Anthropic")
     tavily_api_key: str = Field(default="", description="API key de Tavily para búsqueda web")
     claude_model: str = Field(default="claude-sonnet-4-5-20250929")
     claude_max_tokens: int = Field(default=2048, ge=1, le=8192)
     claude_temperature: float = Field(default=0.2, ge=0.0, le=1.0)
+
+    # ---------------- LLM — Ollama (Gemma, open source) ----------------
+    ollama_base_url: str = Field(default="http://localhost:11434", description="URL base de Ollama")
+    gemma_model: str = Field(default="costforecast-gemma4", description="Nombre del modelo custom en Ollama")
+    gemma_model_fallback: str = Field(default="gemma4:e4b", description="Tag oficial de Gemma 4 en Ollama")
 
     # ---------------- Paths ----------------
     data_dir: Path = Field(default=Path("./data"))

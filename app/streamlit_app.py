@@ -97,8 +97,8 @@ st.caption(
 # Tabs
 # ---------------------------------------------------------------------------
 
-tab_forecast, tab_eda, tab_agent = st.tabs(
-    ["📊 Pronóstico", "🔍 Explorar datos", "🤖 Agente de IA"]
+tab_forecast, tab_eda, tab_agent, tab_gemma = st.tabs(
+    ["📊 Pronóstico", "🔍 Explorar datos", "🤖 Agente de IA", "🟢 Agente Open Source"]
 )
 
 
@@ -637,3 +637,225 @@ with tab_agent:
             st.session_state["chat_history"] = []
             st.session_state.pop("agent_instance", None)
             st.rerun()
+
+
+# ===========================================================================
+# TAB 4 — AGENTE OPEN SOURCE (GEMMA 4 + OLLAMA)
+# ===========================================================================
+
+with tab_gemma:
+    st.subheader("Agente Open Source — Gemma 4 via Ollama")
+    st.caption(
+        "Agente **ReAct** 100% local · Gemma 4 (Google) · Ollama · DuckDuckGo · "
+        "Sin API keys externas · Corre en CPU"
+    )
+
+    # ── Badges ───────────────────────────────────────────────────────────────
+    bcol1, bcol2, bcol3, bcol4 = st.columns(4)
+    bcol1.success("🟢 100% Open Source")
+    bcol2.info("🦙 Ollama local")
+    bcol3.info("🔍 DuckDuckGo")
+    bcol4.info("💻 CPU-only")
+
+    st.divider()
+
+    # ── Verificar conexión con Ollama ─────────────────────────────────────────
+    @st.cache_data(ttl=30, show_spinner=False)
+    def _check_ollama_connection() -> tuple[bool, list[str]]:
+        try:
+            from costforecast.agent.gemma_agent import GemmaAgent
+            from costforecast.config import settings as _cfg
+
+            ok = GemmaAgent.check_ollama(_cfg.ollama_base_url)
+            models = GemmaAgent.list_models(_cfg.ollama_base_url) if ok else []
+            return ok, models
+        except Exception:
+            return False, []
+
+    ollama_ok, available_models = _check_ollama_connection()
+
+    if not ollama_ok:
+        st.error(
+            "**Ollama no está corriendo** en `http://localhost:11434`\n\n"
+            "Para iniciar el agente open source:\n"
+            "```bash\n"
+            "# 1. Instalar Ollama (si no está instalado)\n"
+            "#    https://ollama.com/download\n\n"
+            "# 2. Levantar el servidor\n"
+            "ollama serve\n\n"
+            "# 3. Crear el modelo custom (desde la raíz del proyecto)\n"
+            "ollama create costforecast-gemma4 -f infra/Modelfile\n"
+            "```",
+            icon="🔴",
+        )
+        st.info(
+            "**Alternativa**: usa el tab **🤖 Agente de IA** que usa Claude via API de Anthropic.",
+            icon="💡",
+        )
+        st.stop()
+
+    # ── Modelo disponible ─────────────────────────────────────────────────────
+    try:
+        from costforecast.config import settings as _gcfg
+
+        preferred_model = _gcfg.gemma_model
+        fallback_model = _gcfg.gemma_model_fallback
+    except Exception:
+        preferred_model = "costforecast-gemma4"
+        fallback_model = "gemma4:e4b"
+
+    if preferred_model in available_models:
+        active_model = preferred_model
+        st.success(f"Modelo activo: `{active_model}` (custom con Modelfile)", icon="✅")
+    elif fallback_model in available_models:
+        active_model = fallback_model
+        st.warning(
+            f"Modelo custom `{preferred_model}` no encontrado. "
+            f"Usando `{fallback_model}` (oficial).\n\n"
+            f"Para crear el modelo custom: `ollama create costforecast-gemma4 -f infra/Modelfile`",
+            icon="⚠️",
+        )
+    elif available_models:
+        active_model = available_models[0]
+        st.warning(
+            f"Ni `{preferred_model}` ni `{fallback_model}` encontrados. "
+            f"Usando primer modelo disponible: `{active_model}`",
+            icon="⚠️",
+        )
+    else:
+        st.error("Ollama está corriendo pero no tiene modelos descargados.")
+        st.code(f"ollama pull {fallback_model}", language="bash")
+        st.stop()
+
+    # ── Info del agente ───────────────────────────────────────────────────────
+    with st.expander("ℹ️ Cómo funciona este agente", expanded=False):
+        st.markdown(
+            """
+            Este agente usa **estrategia dual-mode**:
+
+            | Modo | Cuándo | Descripción |
+            |---|---|---|
+            | **Native** | Gemma 4 con `think=false` | Tool calling JSON nativo via Ollama |
+            | **Prompting** | Fallback automático | ReAct clásico: el LLM escribe `Acción:`/`Entrada:` en texto |
+
+            El modo se detecta automáticamente al enviar el primer mensaje.
+            Las **5 herramientas** son idénticas a las del agente Claude, pero la búsqueda
+            web usa **DuckDuckGo** en lugar de Tavily.
+            """
+        )
+
+    st.divider()
+
+    # ── Quick prompts ─────────────────────────────────────────────────────────
+    st.markdown("**Preguntas de ejemplo:**")
+    gemma_quick_prompts = [
+        "¿Cuál es la proyección del Equipo 1 para los próximos 3 meses?",
+        "¿Qué pasa con el Equipo 2 si el acero sube 20%?",
+        "Busca noticias sobre precios de materias primas 2025.",
+        "¿Qué variables explican el precio del Equipo 1 según SHAP?",
+        "Simula un shock de -15% en la materia prima Z.",
+    ]
+    gqcols = st.columns(len(gemma_quick_prompts))
+    for i, (gqcol, gqp) in enumerate(zip(gqcols, gemma_quick_prompts)):
+        if gqcol.button(
+            gqp[:38] + "…" if len(gqp) > 38 else gqp,
+            key=f"gemma_quick_{i}",
+            use_container_width=True,
+            help=gqp,
+        ):
+            st.session_state["_gemma_pending_msg"] = gqp
+
+    st.divider()
+
+    # ── Session state ─────────────────────────────────────────────────────────
+    if "gemma_chat_history" not in st.session_state:
+        st.session_state["gemma_chat_history"] = []
+
+    # ── Historial de conversación ─────────────────────────────────────────────
+    for msg in st.session_state["gemma_chat_history"]:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    # ── Input ─────────────────────────────────────────────────────────────────
+    gemma_typed: str | None = st.chat_input(
+        "Escribe tu pregunta (Gemma responde localmente)…",
+        key="gemma_chat_input",
+    )
+    gemma_input: str | None = (
+        st.session_state.pop("_gemma_pending_msg", None) or gemma_typed
+    )
+
+    # ── Procesar mensaje ──────────────────────────────────────────────────────
+    if gemma_input:
+        with st.chat_message("user"):
+            st.markdown(gemma_input)
+        st.session_state["gemma_chat_history"].append(
+            {"role": "user", "content": gemma_input}
+        )
+
+        # Inicializar agente Gemma (cacheado en session_state)
+        if "gemma_agent_instance" not in st.session_state:
+            with st.spinner(f"Inicializando Gemma (`{active_model}`) y detectando modo…"):
+                try:
+                    from costforecast.agent.gemma_agent import GemmaAgent
+                    from costforecast.config import settings as _gcfg2
+
+                    st.session_state["gemma_agent_instance"] = GemmaAgent(
+                        model=active_model,
+                        base_url=_gcfg2.ollama_base_url,
+                    )
+                except Exception as exc:
+                    st.error(f"No se pudo inicializar GemmaAgent: {exc}")
+                    st.stop()
+
+        gemma_agent: object = st.session_state["gemma_agent_instance"]
+
+        # Respuesta con streaming
+        with st.chat_message("assistant"):
+            gemma_placeholder = st.empty()
+            gemma_status = st.status("Gemma razonando…", expanded=False)
+
+            try:
+                gemma_response = ""
+                detected_mode = getattr(gemma_agent, "_mode", "auto")
+
+                for chunk in gemma_agent.stream(gemma_input):  # type: ignore[attr-defined]
+                    msgs = chunk.get("messages", [])
+                    if msgs:
+                        last = msgs[-1]
+                        if hasattr(last, "tool_calls") and last.tool_calls:
+                            for tc in last.tool_calls:
+                                gemma_status.write(
+                                    f"🔧 `{tc['name']}` ← {str(tc.get('args', {}))[:100]}"
+                                )
+                        elif hasattr(last, "content") and isinstance(last.content, str) and last.content:
+                            gemma_response = last.content
+
+                mode_label = f"Modo: **{detected_mode}**" if detected_mode else ""
+                gemma_status.update(
+                    label=f"Completado · {mode_label}",
+                    state="complete",
+                )
+                gemma_placeholder.markdown(gemma_response)
+
+            except Exception as exc:
+                gemma_response = f"Error al invocar Gemma: {exc}"
+                gemma_status.update(label="Error", state="error")
+                gemma_placeholder.error(gemma_response)
+
+        st.session_state["gemma_chat_history"].append(
+            {"role": "assistant", "content": gemma_response}
+        )
+
+    # ── Limpiar ───────────────────────────────────────────────────────────────
+    if st.session_state["gemma_chat_history"]:
+        st.divider()
+        ccol1, ccol2 = st.columns([1, 4])
+        if ccol1.button("🗑️ Limpiar chat", key="clear_gemma_chat"):
+            st.session_state["gemma_chat_history"] = []
+            st.session_state.pop("gemma_agent_instance", None)
+            st.rerun()
+        ccol2.caption(
+            f"Modelo activo: `{active_model}` · "
+            "Agente local · Sin datos enviados a servicios externos"
+        )
