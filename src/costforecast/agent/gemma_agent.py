@@ -24,6 +24,9 @@ from __future__ import annotations
 
 import json
 import re
+import time
+import urllib.parse
+import urllib.request
 from typing import Any, Literal
 
 import pandas as pd
@@ -150,33 +153,136 @@ def get_historical_data(fecha_inicio: str, fecha_fin: str) -> str:
     return subset.describe().round(2).to_json()
 
 
+def _search_duckduckgo(query: str, max_results: int = 5) -> list[dict]:
+    """Intenta DuckDuckGo con 2 reintentos. Devuelve lista vacía si falla."""
+    for attempt, delay in enumerate([0, 3]):
+        if delay:
+            time.sleep(delay)
+        try:
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=max_results, region="wt-wt"))
+            if results:
+                logger.debug("DDG intento {}: {} resultados", attempt + 1, len(results))
+                return results
+        except Exception as e:
+            logger.warning("DDG intento {} falló: {}", attempt + 1, e)
+    return []
+
+
+def _search_wikipedia(query: str, sentences: int = 5) -> list[dict]:
+    """
+    Fallback: busca en Wikipedia vía su REST API pública (sin key, sin rate-limit).
+    Devuelve los extractos de los artículos más relevantes.
+    """
+    results = []
+    try:
+        # 1. Buscar títulos de artículos
+        search_url = (
+            "https://en.wikipedia.org/w/api.php?"
+            + urllib.parse.urlencode({
+                "action": "query",
+                "list": "search",
+                "srsearch": query,
+                "srlimit": 3,
+                "format": "json",
+                "utf8": 1,
+            })
+        )
+        req = urllib.request.Request(
+            search_url,
+            headers={"User-Agent": "CostForecastAI/1.0 (educational project)"},
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read())
+
+        titles = [r["title"] for r in data.get("query", {}).get("search", [])]
+
+        # 2. Obtener extracto de cada artículo
+        for title in titles[:2]:
+            extract_url = (
+                "https://en.wikipedia.org/api/rest_v1/page/summary/"
+                + urllib.parse.quote(title.replace(" ", "_"))
+            )
+            req2 = urllib.request.Request(
+                extract_url,
+                headers={"User-Agent": "CostForecastAI/1.0 (educational project)"},
+            )
+            with urllib.request.urlopen(req2, timeout=8) as resp2:
+                page = json.loads(resp2.read())
+            extract = page.get("extract", "")
+            if extract:
+                results.append({
+                    "titulo": page.get("title", title),
+                    "resumen": extract[:400],
+                    "url": page.get("content_urls", {}).get("desktop", {}).get("page", ""),
+                    "fuente": "Wikipedia",
+                })
+    except Exception as e:
+        logger.warning("Wikipedia fallback falló: {}", e)
+
+    return results
+
+
 @tool
 def web_search_market_news(query: str) -> str:
-    """Busca noticias actuales del mercado de materias primas y construcción.
+    """Busca noticias y contexto sobre materias primas y mercados de construcción.
 
-    Usa DuckDuckGo (gratuito, sin API key).
+    Estrategia dual: DuckDuckGo (noticias recientes) → Wikipedia (contexto
+    enciclopédico si DuckDuckGo falla por rate-limiting). Siempre devuelve
+    información útil sin necesidad de API keys.
 
     Args:
         query: término de búsqueda en español o inglés
     """
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=4, region="es-es"))
-        if not results:
-            return json.dumps({"mensaje": f"Sin resultados para: {query}"})
+    # Intento 1: DuckDuckGo (noticias recientes)
+    ddg_results = _search_duckduckgo(query)
+    if ddg_results:
         return json.dumps(
             [
                 {
                     "titulo": r.get("title", ""),
-                    "resumen": r.get("body", "")[:300],
+                    "resumen": r.get("body", "")[:350],
                     "url": r.get("href", ""),
+                    "fuente": "DuckDuckGo",
                 }
-                for r in results
+                for r in ddg_results
             ],
             ensure_ascii=False,
         )
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+
+    # Intento 2: Wikipedia como fallback confiable
+    logger.info("DDG sin resultados para '{}' — usando Wikipedia fallback", query)
+    # Traducir query al inglés si contiene palabras clave en español
+    en_query = (
+        query
+        .replace("materias primas", "raw materials commodities")
+        .replace("precios", "prices")
+        .replace("construcción", "construction")
+        .replace("acero", "steel")
+        .replace("equipos", "equipment")
+    )
+    wiki_results = _search_wikipedia(en_query)
+    if wiki_results:
+        return json.dumps(
+            {
+                "fuente": "Wikipedia (DuckDuckGo no disponible en esta sesión)",
+                "nota": "Información enciclopédica — puede no reflejar precios en tiempo real",
+                "resultados": wiki_results,
+            },
+            ensure_ascii=False,
+        )
+
+    # Sin resultados en ninguna fuente
+    return json.dumps(
+        {
+            "mensaje": "Búsqueda web no disponible temporalmente.",
+            "alternativa": (
+                "Puedo responder sobre los datos históricos del proyecto usando "
+                "get_historical_data o simulate_scenario con los coeficientes reales del EDA."
+            ),
+        },
+        ensure_ascii=False,
+    )
 
 
 @tool
