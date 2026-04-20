@@ -1,37 +1,15 @@
-# Modelfile — costforecast-gemma4
-#
-# Crea el modelo custom con:
-#   ollama create costforecast-gemma4 -f infra/Modelfile
-#
-# Este archivo fue provisto por Santiago Rueda y optimizado para
-# tool calling nativo en el agente CostForecast AI.
-#
-# IMPORTANTE: El reasoning/thinking debe estar DESACTIVADO para que
-# Gemma 4 genere tool_calls JSON estructurados (no texto libre de razonamiento).
-# Si tu versión de Ollama no soporta "think false", el agente cae
-# automáticamente al modo ReAct prompting sin intervención del usuario.
-
 FROM gemma4:e4b
 
-# ── Parámetros de inferencia ────────────────────────────────────────────────
-
-# Contexto amplio para conversaciones largas con múltiples tool calls
-PARAMETER num_ctx 8192
-
-# Temperatura baja: respuestas más deterministas (crítico para tool calling)
+# Reasoning mode DESACTIVADO — crítico para tool calling estable.
+# Cuando reasoning está activo, el modelo genera tokens <thinking>...</thinking>
+# que corrompen el formato JSON esperado por el parser de tool calls de Ollama.
+# Referencia: https://haimaker.ai/blog/gemma-4-ollama-openclaw-setup/
 PARAMETER temperature 0.1
-
-# Máximo de tokens por respuesta
+PARAMETER top_p 0.9
+PARAMETER repeat_penalty 1.05
+PARAMETER num_ctx 8192
 PARAMETER num_predict 2048
 
-# Desactivar thinking/reasoning para tool calling estructurado
-# (soportado en Ollama >= 0.6.0 con Gemma 4)
-PARAMETER think false
-
-# ── System prompt ────────────────────────────────────────────────────────────
-
-SYSTEM """
-Eres un asistente experto en análisis de costos de equipos de construcción.
-Tienes acceso a herramientas de forecasting, datos históricos, simulación de
-escenarios y búsqueda web. Siempre responde en español. Sé conciso y ejecutivo.
-"""
+# El system prompt se inyecta desde el agente Python.
+# Este SYSTEM aquí es solo un fallback de seguridad.
+SYSTEM "Eres un asistente de análisis financiero. Responde siempre en español. Cuando tengas herramientas disponibles, úsalas para responder con datos reales."
