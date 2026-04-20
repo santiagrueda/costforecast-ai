@@ -502,13 +502,21 @@ class GemmaAgent:
 
     @staticmethod
     def list_models(base_url: str = OLLAMA_URL) -> list[str]:
-        """Lista los modelos disponibles en Ollama."""
+        """Lista los modelos disponibles en Ollama.
+
+        Normaliza los nombres quitando el sufijo ':latest' implícito que Ollama
+        agrega automáticamente, para que la comparación funcione tanto con
+        'costforecast-gemma4' como con 'costforecast-gemma4:latest'.
+        """
         try:
             import json as _json
             import urllib.request
 
             with urllib.request.urlopen(f"{base_url}/api/tags", timeout=3) as r:
                 data = _json.loads(r.read())
-            return [m["name"] for m in data.get("models", [])]
+            return [
+                m["name"].removesuffix(":latest")
+                for m in data.get("models", [])
+            ]
         except Exception:
             return []
