@@ -218,14 +218,21 @@ with tab_forecast:
             )
         )
 
-        # Cutoff vertical line
-        fig.add_vline(
-            x=str(last_date.date()),
-            line_width=1,
-            line_dash="dot",
-            line_color="gray",
-            annotation_text="Fin histórico",
-            annotation_position="top left",
+        # Cutoff vertical line — add_vline con annotation falla en Plotly cuando
+        # el eje x mezcla timestamps numéricos y strings; usar add_shape explícito.
+        cutoff_x = str(last_date.date())
+        fig.add_shape(
+            type="line",
+            x0=cutoff_x, x1=cutoff_x,
+            y0=0, y1=1, yref="paper",
+            line=dict(width=1, dash="dot", color="gray"),
+        )
+        fig.add_annotation(
+            x=cutoff_x, y=1, yref="paper",
+            text="Fin histórico",
+            showarrow=False,
+            xanchor="right",
+            font=dict(size=11, color="gray"),
         )
 
         fig.update_layout(
