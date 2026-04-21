@@ -384,7 +384,31 @@ El agente buscará noticias de mercado, simulará el escenario con los coeficien
 
 ## 🔮 Próximos pasos
 
-Documentados en [`docs/informe_ejecutivo.pdf`](docs/informe_ejecutivo.pdf), sección "Futuros ajustes o mejoras".
+### Mejoras metodológicas
+
+1. **Pronóstico de materias primas**: reemplazar el supuesto de persistencia (materias primas constantes en el horizonte) por modelos propios para X, Y, Z — ARIMA univariado o VAR multivariado. Reduce el error en horizontes > 10 días.
+
+2. **Optimización de hiperparámetros**: grid search u Optuna para seleccionar el orden ARIMA óptimo (p, d, q) por equipo vía AIC/BIC, y para ajustar `n_estimators`, `max_depth` y `learning_rate` de XGBoost.
+
+3. **Modelos de ensemble**: combinar SARIMAX y XGBoost mediante stacking o promedio ponderado por MAPE histórico. En series de tiempo, los ensembles suelen superar al mejor modelo individual.
+
+4. **Detección de cambios estructurales**: tests de Chow o CUSUM para identificar regímenes distintos (ej. shock COVID-19 en 2020). Considerar modelos Markov-Switching ARIMA para series con dos regímenes de precio.
+
+5. **Intervalos de confianza empíricos**: complementar los intervalos paramétricos de SARIMAX con simulaciones Monte Carlo sobre los residuos históricos del backtesting, especialmente para horizontes > 10 días donde el modelo paramétrico subestima la incertidumbre real.
+
+### Mejoras de producto
+
+6. **Actualización automática del dataset**: pipeline de ingesta que actualice los precios de materias primas desde APIs de mercado (Bloomberg, Quandl, FRED) de forma diaria o semanal.
+
+7. **Re-entrenamiento continuo (MLOps)**: reentrenamiento automático cuando el MAPE en producción supere un umbral configurado — monitoreo de model drift con alertas.
+
+8. **Despliegue productivo de la API**: migrar el endpoint FastAPI a AWS (ECS Fargate + ALB) para que otros sistemas de la empresa puedan consumir proyecciones programáticamente.
+
+9. **Memoria persistente del agente**: migrar de `MemorySaver` en RAM a un backend persistente (PostgreSQL + pgvector o Redis) para mantener el historial de conversaciones entre sesiones de usuario.
+
+---
+
+> El análisis detallado de cada mejora, incluyendo justificación técnica y estimación de impacto, se encuentra en [`docs/informe.md`](docs/informe.md) — sección **6. Futuros ajustes o mejoras**.
 
 ## 👤 Autor
 
