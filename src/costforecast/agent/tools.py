@@ -217,7 +217,7 @@ class GetHistoricalDataInput(BaseModel):
 
 @tool(args_schema=GetHistoricalDataInput)
 def get_historical_data(
-    columns: list[str] | None = None,
+    columns: list[str] = [],  # noqa: B006
     start_date: str | None = None,
     end_date: str | None = None,
     last_n: int | None = None,

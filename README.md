@@ -51,7 +51,7 @@ Una empresa constructora debe gestionar el suministro de dos tipos de equipos cr
 
 ## 🏛️ Arquitectura
 
-La arquitectura propuesta en AWS se documenta en [`infra/architecture.png`](infra/architecture.png). Incluye:
+La arquitectura propuesta en AWS se documenta en [`infra/architecture.md`](infra/architecture.md) (diagrama SVG en [`infra/costforecast_aws.svg`](infra/costforecast_aws.svg)). Incluye:
 
 - **S3** para data lake (raw + processed).
 - **AWS Glue** para ETL.

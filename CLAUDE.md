@@ -151,21 +151,20 @@ make api              # Lanzar FastAPI
 
 1. ✅ Estructura base del proyecto
 2. ✅ Módulos `config`, `logger`, `data/loader`, `data/quality`
-3. ⬜ ETL: consolidar X, Y, Z con `historico_equipos` y validar
-4. ⬜ Notebook 01_EDA.ipynb con storytelling visual
-5. ⬜ Módulo `features/engineering.py` (lags, rolling, diffs)
-6. ⬜ Baseline + SARIMAX + Prophet + XGBoost en `models/`
-7. ⬜ Backtesting walk-forward en `evaluation/`
-8. ⬜ Forecasting con intervalos + Monte Carlo
-9. ⬜ SHAP wrapper en `explainability/`
-10. ⬜ Agente LangGraph con 5 tools
-11. ⬜ UI Streamlit
-12. ⬜ FastAPI endpoint
-13. ⬜ Diagrama arquitectura AWS en draw.io
-14. ⬜ Informe ejecutivo (docs/informe_ejecutivo.md)
-15. ⬜ Documento agente vs IA convencional
-16. ⬜ Security note sobre prompt injection
-17. ⬜ Video demo de 3 min
+3. ✅ ETL: consolidar X, Y, Z con `historico_equipos` y validar (`data/profiling.py`)
+4. ✅ Notebook 01_EDA.ipynb con storytelling visual (8 secciones completas)
+5. ✅ Módulo `features/engineering.py` (lags, rolling, diffs)
+6. ✅ Baseline + SARIMAX + Prophet + XGBoost en `models/`
+7. ✅ Backtesting walk-forward en `evaluation/backtest.py`
+8. ✅ Forecasting con intervalos + Monte Carlo (`forecasting/generate.py`)
+9. ✅ SHAP wrapper en `explainability/shap_wrapper.py`
+10. ✅ Agente LangGraph con 5 tools (`agent/graph.py` + `agent/tools.py`)
+11. ✅ UI Streamlit 4 tabs (`app/streamlit_app.py`)
+12. ✅ FastAPI endpoint con 7 rutas (`api/main.py`)
+13. ✅ Diagrama arquitectura AWS (`infra/costforecast_aws.svg` + `infra/architecture.md`)
+14. ✅ Informe ejecutivo (`docs/informe.md`)
+15. ✅ Security note sobre prompt injection (`docs/security_note.md`)
+16. ⬜ Video demo de 3 min
 
 ## Políticas de seguridad del proyecto
 

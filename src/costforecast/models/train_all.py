@@ -71,7 +71,7 @@ def train_and_save(df: pd.DataFrame) -> dict[str, dict[str, Path]]:
         path = MODELS_DIR / f"baseline_{target}.pkl"
         joblib.dump(baseline, path)
         saved[target]["Persistence"] = path
-        logger.info("  ✓ Baseline (último valor: {:.2f})", baseline._last_value)
+        logger.info("  ✓ Baseline (último valor: {:.2f})", baseline.last_value)
 
         # ── SARIMAX(1,1,1) ──────────────────────────────────────────────────
         sarimax = SARIMAXModel(order=(1, 1, 1))
