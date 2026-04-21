@@ -198,11 +198,9 @@ Basado en los resultados del backtesting:
 
 8. **Re-entrenamiento continuo**: MLOps con reentrenamiento automático cuando el MAPE en producción supere un umbral configurado (monitoreo de model drift).
 
-9. **Dashboard Power BI**: Integrar las proyecciones y el historial en un reporte ejecutivo con KPIs de desviación presupuestal y alertas de precio.
+9. **API REST productiva**: Desplegar el endpoint FastAPI en AWS (ECS Fargate + ALB) para que otros sistemas de la empresa puedan consumir las proyecciones programáticamente.
 
-10. **API REST productiva**: Desplegar el endpoint FastAPI en AWS (ECS Fargate + ALB) para que otros sistemas de la empresa puedan consumir las proyecciones programáticamente.
-
-11. **Memoria persistente del agente**: Migrar de `MemorySaver` en RAM a un backend persistente (PostgreSQL + pgvector o Redis) para mantener el historial de conversaciones entre sesiones.
+10. **Memoria persistente del agente**: Migrar de `MemorySaver` en RAM a un backend persistente (PostgreSQL + pgvector o Redis) para mantener el historial de conversaciones entre sesiones.
 
 ---
 

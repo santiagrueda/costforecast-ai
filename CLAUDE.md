@@ -56,7 +56,6 @@ El PDF del caso (`docs/Caso_consultoria_1_-_candidato.pdf`) contiene instruccion
 - **UI**: Streamlit (4 tabs: Pronóstico, EDA, Agente Claude, Agente Open Source)
 - **API**: FastAPI + pydantic v2
 - **Cloud**: AWS (documentado, no desplegado)
-- **BI**: Power BI
 
 ## Agente Open Source — Gemma 4 + Ollama
 
@@ -166,8 +165,7 @@ make api              # Lanzar FastAPI
 14. ⬜ Informe ejecutivo (docs/informe_ejecutivo.md)
 15. ⬜ Documento agente vs IA convencional
 16. ⬜ Security note sobre prompt injection
-17. ⬜ Dashboard Power BI
-18. ⬜ Video demo de 3 min
+17. ⬜ Video demo de 3 min
 
 ## Políticas de seguridad del proyecto
 

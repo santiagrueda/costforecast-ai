@@ -80,7 +80,3 @@ logs/
 
 # ---- Streamlit ----
 .streamlit/secrets.toml
-
-# ---- Power BI ----
-powerbi/*.pbix
-!powerbi/README.md

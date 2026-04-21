@@ -47,8 +47,7 @@ Una empresa constructora debe gestionar el suministro de dos tipos de equipos cr
 | **Agente IA (Open Source)** | Agente 100% local, sin API keys | LangGraph, Gemma 4, Ollama, DuckDuckGo |
 | **UI** | App de demostración para el evaluador | Streamlit |
 | **API** | Endpoint de serving del modelo | FastAPI |
-| **Cloud** | Arquitectura documentada | AWS (S3, Lambda, SageMaker, Bedrock) |
-| **BI** | Dashboard ejecutivo | Power BI |
+| **Cloud** | Arquitectura documentada | AWS (S3, SageMaker, Bedrock, Lambda) |
 
 ## 🏛️ Arquitectura
 
@@ -56,10 +55,10 @@ La arquitectura propuesta en AWS se documenta en [`infra/architecture.png`](infr
 
 - **S3** para data lake (raw + processed).
 - **AWS Glue** para ETL.
-- **SageMaker** para entrenamiento reproducible.
+- **SageMaker** para entrenamiento reproducible y para alojar el modelo Gemma 4 como endpoint personalizado en un despliegue cloud (reemplaza a Ollama local en producción).
 - **Lambda + API Gateway** para serving del modelo.
 - **App Runner** para la UI del agente conversacional.
-- **Bedrock** para acceder a Claude como LLM del agente.
+- **Bedrock** para acceder a Claude como LLM del agente Claude. En un escenario 100% AWS, Bedrock también puede servir como backend para modelos open-source compatibles (Llama, Mistral) como alternativa a Gemma vía SageMaker.
 - **Secrets Manager, IAM, CloudWatch** para seguridad y observabilidad.
 
 ## 📁 Estructura del proyecto
@@ -83,8 +82,7 @@ costforecast-ai/
 ├── api/               # FastAPI
 ├── infra/             # Arquitectura AWS + Terraform
 ├── tests/             # Pytest
-├── docs/              # Informe, explicaciones
-└── powerbi/           # Dashboard BI
+└── docs/              # Informe, explicaciones
 ```
 
 ## 🚀 Quickstart
