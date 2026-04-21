@@ -154,7 +154,7 @@ El pipeline sigue un flujo iterativo:
 ## 📈 Resultados
 
 > Todos los resultados fueron computados sobre el dataset real (`historico_equipos.csv`).  
-> 3 530 observaciones diarias en días hábiles · 2010-01-04 → 2023-08-31 · 0 nulos · 0 gaps > 5 días.
+> 3 530 observaciones diarias en días hábiles · 2010-01-04 → 2023-08-31 · 0 nulos · 34 gaps temporales (feriados y cierres de mercado — esperables, no patológicos).
 
 ---
 
@@ -279,6 +279,62 @@ Validación expanding-window · 5 folds · horizontes 1 / 5 / 20 días hábiles 
 | Equipo 1 | 20 días | 1.33 % | 1.17 % | −12 % |
 | Equipo 2 | 1 día | 2.41 % | 1.66 % | **−31 %** |
 | Equipo 2 | 20 días | 3.65 % | 1.44 % | **−61 %** |
+
+> **XGBoost** fue entrenado sobre el dataset completo (`make train`) con 56 features (lags 1–5 + rolling 5/10/20 días + diferencias). Feature más importante por SHAP implícito (gain): `Price_Y` para Equipo 1 y `Price_Z` para Equipo 2 — consistente con la correlación de Pearson. Los resultados de backtesting de XGBoost se generan con `python -m costforecast.evaluation.backtest`.
+
+---
+
+### 7. Pronósticos generados — `make forecast`
+
+Horizonte: **20 días hábiles** desde 2023-08-31 · Intervalos de confianza 95 % vía Monte Carlo (1 000 simulaciones) · Modelo: SARIMAX(1,1,1) + exog persistencia.
+
+**Equipo 1 — Price_Equipo1**
+
+| Fecha | Pronóstico | IC 95 % inferior | IC 95 % superior |
+|---|---|---|---|
+| 2023-09-01 | 453.32 | 437.80 | 469.65 |
+| 2023-09-08 | 453.35 | 415.72 | 493.96 |
+| 2023-09-15 | 453.35 | 399.60 | 505.28 |
+| 2023-09-28 | 453.35 | 382.44 | 528.34 |
+| **Media 20 días** | **453.35** | **403.46** | **503.74** |
+
+**Equipo 2 — Price_Equipo2**
+
+| Fecha | Pronóstico | IC 95 % inferior | IC 95 % superior |
+|---|---|---|---|
+| 2023-09-01 | 931.32 | 901.92 | 962.24 |
+| 2023-09-08 | 931.79 | 860.49 | 1 008.72 |
+| 2023-09-15 | 931.79 | 829.95 | 1 030.17 |
+| 2023-09-28 | 931.79 | 797.45 | 1 073.84 |
+| **Media 20 días** | **931.77** | **837.24** | **1 027.23** |
+
+Los pronósticos completos se guardan en `data/forecasts/forecasts.csv` y `data/forecasts/forecasts.parquet`.
+
+## 🔌 API REST — FastAPI
+
+Disponible en `http://localhost:8000/docs` tras `make api`.
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `GET` | `/health` | Estado del servicio y versión |
+| `GET` | `/forecast/{equipment}?horizon_days=N` | Pronóstico SARIMAX (1–60 días) |
+| `GET` | `/historical?start_date=&end_date=&last_n=` | Estadísticas del dataset histórico |
+| `POST` | `/scenario` | Simulación what-if (cambio % en X, Y, Z) |
+| `GET` | `/shap/{equipment}?n_top_features=N` | Importancia de features vía SHAP |
+| `GET` | `/models` | Modelos disponibles y columnas |
+| `DELETE` | `/cache` | Limpia caché de modelos en memoria |
+
+Ejemplo de uso:
+
+```bash
+# Pronóstico de 10 días para Equipo 1
+curl http://localhost:8000/forecast/equipo1?horizon_days=10
+
+# ¿Qué pasa si Price_Y sube 20%?
+curl -X POST http://localhost:8000/scenario \
+  -H "Content-Type: application/json" \
+  -d '{"equipment": "equipo1", "price_y_change_pct": 20, "horizon_days": 10}'
+```
 
 ## 🤖 Los agentes de IA
 
